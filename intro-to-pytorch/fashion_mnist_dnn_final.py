@@ -38,6 +38,7 @@ from collections import OrderedDict
 
 # Step1 Build the Model
 
+# Using nn.Module (accepts nn.functional & nn.Module)
 class Network(nn.Module):
     def __init__(self, input_size, output_size, hidden_layers, drop_p=0.2):
         super().__init__()
@@ -61,6 +62,26 @@ class Network(nn.Module):
         x = self.output(x)
 
         return F.log_softmax(x, dim=1)
+
+##############################
+#### Model with Sequential ###
+##############################
+
+# Using Sequential Module (accepts only nn.Module)
+# classifier2 = nn.Sequential(OrderedDict([
+#     ('fc1',nn.Linear(input_dim, hidden_layers[0])),
+#     ('act1',nn.ReLU()),
+#     ('dropout1', nn.Dropout(p = 0.2)),
+#     ('fc2', nn.Linear(hidden_layers[0], hidden_layers[1])),
+#     ('act2',nn.ReLU()),
+#     ('dropout2', nn.Dropout(p = 0.2)),
+#     ('fc3', nn.Linear(hidden_layers[1], hidden_layers[2])),
+#     ('act3',nn.ReLU()),
+#     ('dropout3', nn.Dropout(p = 0.2)),
+#     ('fc4', nn.Linear(hidden_layers[2], output_dim)),
+#     ('act4',nn.ReLU()),
+#     ('softmax', nn.LogSoftmax(dim = 1))
+# ]))
 
 input_dim = 784
 hidden_layers = [256, 128, 64]
@@ -203,3 +224,41 @@ def view_classify(img, ps, version="MNIST"):
     plt.tight_layout()
 
 view_classify(image.resize_(1, 28, 28), ps, version='Fashion')
+
+################################
+#### Saving & Loading Models ###
+################################
+
+# Method1
+
+# Saving and  Loading state_dict
+torch.save(network.state_dict(), 'checkpoint.pth')
+state_dict = torch.load('checkpoint.pth')
+
+# Creating Same Architecture Network and putting state_dict on the Network
+input_dim = 784
+hidden_layers = [256, 128, 64]
+output_dim = 10
+classifier2 = Network(input_dim, output_dim, hidden_layers)
+classifier2.load_state_dict(state_dict)
+
+# Method2
+
+checkpoint = {'input_dim': 784,
+              'output_dim': 10,
+              'hidden_layers': [each.out_features for each in network.hidden_layers],
+              'state_dict': network.state_dict()}
+torch.save(checkpoint, 'checkpoint2.pth')
+
+
+def load_checkpoint(filepath):
+    checkpoint = torch.load(filepath)
+    model = Network(checkpoint['input_dim'],
+                             checkpoint['output_dim'],
+                             checkpoint['hidden_layers'])
+    model.load_state_dict(checkpoint['state_dict'])
+
+    return model
+
+model = load_checkpoint('checkpoint2.pth')
+print(model)

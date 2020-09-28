@@ -35,18 +35,18 @@ plt.imshow(image.numpy().squeeze(), cmap='Greys_r')
 #### Model with Sequential ###
 ##############################
 
-input_dim = 784
-hidden_sizes = [128, 64]
-output_dim = 10
-
-classifier = nn.Sequential(OrderedDict([('fc1', nn.Linear(input_dim, hidden_sizes[0])),
-                            ('relu1', nn.ReLU()),
-                            ('dropout1', nn.Dropout()),
-                            ('fc2', nn.Linear(hidden_sizes[0], hidden_sizes[1])),
-                            ('relu2', nn.ReLU()),
-                            ('dropout2', nn.Dropout()),
-                            ('output', nn.Linear(hidden_sizes[1], output_dim)),
-                            ('logsoftmax', nn.LogSoftmax(dim = 1))]))
+# input_dim = 784
+# hidden_sizes = [128, 64]
+# output_dim = 10
+#
+# classifier = nn.Sequential(OrderedDict([('fc1', nn.Linear(input_dim, hidden_sizes[0])),
+#                             ('relu1', nn.ReLU()),
+#                             ('dropout1', nn.Dropout()),
+#                             ('fc2', nn.Linear(hidden_sizes[0], hidden_sizes[1])),
+#                             ('relu2', nn.ReLU()),
+#                             ('dropout2', nn.Dropout()),
+#                             ('output', nn.Linear(hidden_sizes[1], output_dim)),
+#                             ('logsoftmax', nn.LogSoftmax(dim = 1))]))
 
 #########################
 #### Model with Class ###
@@ -59,7 +59,7 @@ class Network(nn.Module):
         self.hidden_layers = nn.ModuleList([nn.Linear(input_dim, hidden_sizes[0])])
         layer_sizes = zip(hidden_sizes[:-1], hidden_sizes[1:])
 
-        self.hidden_layers.extend([nn.Linear(h1, h2)] for h1, h2 in layer_sizes)
+        self.hidden_layers.extend([nn.Linear(h1, h2) for h1, h2 in layer_sizes])
 
         self.output = nn.Linear(hidden_sizes[-1], output_dim)
 
@@ -73,6 +73,12 @@ class Network(nn.Module):
         x = self.output(x)
 
         return F.log_softmax(x, dim = 1)
+
+input_dim = 784
+hidden_sizes = [128, 64]
+output_dim = 10
+classifier = Network(input_dim, output_dim, hidden_sizes)
+
 
 # Step2 Set loss
 criterian = nn.NLLLoss()
@@ -211,3 +217,41 @@ def view_classify(img, ps, version="MNIST"):
     plt.tight_layout()
 
 view_classify(image.resize_(1, 28, 28), ps, version='MNIST')
+
+################################
+#### Saving & Loading Models ###
+################################
+
+# Method1
+
+# Saving and  Loading state_dict
+torch.save(classifier.state_dict(), 'checkpoint.pth')
+state_dict = torch.load('checkpoint.pth')
+
+# Creating Same Architecture Network and putting state_dict on the Network
+input_dim = 784
+hidden_sizes = [128, 64]
+output_dim = 10
+classifier2 = Network(input_dim, output_dim, hidden_sizes)
+classifier2.load_state_dict(state_dict)
+
+# Method2
+
+checkpoint = {'input_dim': 784,
+              'output_dim': 10,
+              'hidden_layers': [each.out_features for each in classifier.hidden_layers],
+              'state_dict': classifier.state_dict()}
+torch.save(checkpoint, 'checkpoint2.pth')
+
+
+def load_checkpoint(filepath):
+    checkpoint = torch.load(filepath)
+    model = Network(checkpoint['input_dim'],
+                             checkpoint['output_dim'],
+                             checkpoint['hidden_layers'])
+    model.load_state_dict(checkpoint['state_dict'])
+
+    return model
+
+model = load_checkpoint('checkpoint2.pth')
+print(model)
